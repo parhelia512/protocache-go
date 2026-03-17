@@ -16,6 +16,121 @@ func Serialize(obj proto.Message) ([]byte, error) {
 	return castToBytes(data), nil
 }
 
+func EncodeBool(v bool) []uint32 {
+	return serializeBool(v)
+}
+
+func EncodeInt32(v int32) []uint32 {
+	return serializeScalar(v)
+}
+
+func EncodeUint32(v uint32) []uint32 {
+	return serializeScalar(v)
+}
+
+func EncodeInt64(v int64) []uint32 {
+	return serializeScalar(v)
+}
+
+func EncodeUint64(v uint64) []uint32 {
+	return serializeScalar(v)
+}
+
+func EncodeFloat32(v float32) []uint32 {
+	return serializeScalar(v)
+}
+
+func EncodeFloat64(v float64) []uint32 {
+	return serializeScalar(v)
+}
+
+func EncodeBytes(data []byte) ([]uint32, error) {
+	return serializeBytes(data)
+}
+
+func EncodeString(str string) ([]uint32, error) {
+	return serializeString(str)
+}
+
+func EncodeMessageParts(parts [][]uint32) ([]uint32, error) {
+	return encodeMessageParts(parts)
+}
+
+func EncodeInt32Array(vec []int32) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) int32 { return vec[i] })
+}
+
+func EncodeUint32Array(vec []uint32) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) uint32 { return vec[i] })
+}
+
+func EncodeInt64Array(vec []int64) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) int64 { return vec[i] })
+}
+
+func EncodeUint64Array(vec []uint64) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) uint64 { return vec[i] })
+}
+
+func EncodeFloat32Array(vec []float32) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) float32 { return vec[i] })
+}
+
+func EncodeFloat64Array(vec []float64) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) float64 { return vec[i] })
+}
+
+func EncodeBoolArray(vec []bool) ([]uint32, error) {
+	tmp := make([]byte, len(vec))
+	for i, one := range vec {
+		if one {
+			tmp[i] = 1
+		}
+	}
+	return serializeBytes(tmp)
+}
+
+func EncodeEnumArray[T Enum](vec []T) ([]uint32, error) {
+	return serializeScalarArray(len(vec), func(i int) int32 { return int32(vec[i]) })
+}
+
+func EncodeStringArray(vec []string) ([]uint32, error) {
+	return serializeArray(len(vec), func(i int) ([]uint32, error) {
+		return serializeString(vec[i])
+	})
+}
+
+func EncodeBytesArray(vec [][]byte) ([]uint32, error) {
+	return serializeArray(len(vec), func(i int) ([]uint32, error) {
+		return serializeBytes(vec[i])
+	})
+}
+
+func EncodeObjectArray(size int, get func(i int) ([]uint32, error)) ([]uint32, error) {
+	return serializeArray(size, get)
+}
+
+func EncodeMapParts(keys [][]uint32, vals [][]uint32, stringKey bool) ([]uint32, error) {
+	return encodeMapParts(keys, vals, stringKey)
+}
+
+func BytesToWords(data []byte) []uint32 {
+	if len(data) == 0 {
+		return nil
+	}
+	if (len(data) & 3) != 0 {
+		panic("unaligned field data")
+	}
+	return castBytesToWords(data)
+}
+
+func WordsToBytes(data []uint32) []byte {
+	if len(data) == 0 {
+		return nil
+	}
+	return castToBytes(data)
+}
+
 func calcWordSize(size uint32) uint32 {
 	return (size + 3) / 4
 }
@@ -86,6 +201,10 @@ func serializeMessage(message protoreflect.Message) ([]uint32, error) {
 		}
 		return parts[0], nil
 	}
+	return encodeMessageParts(parts)
+}
+
+func encodeMessageParts(parts [][]uint32) ([]uint32, error) {
 	for len(parts) != 0 && parts[len(parts)-1] == nil {
 		parts = parts[:len(parts)-1]
 	}
@@ -437,6 +556,15 @@ func serializeMap(field protoreflect.FieldDescriptor, pack protoreflect.Map) ([]
 		return nil, err
 	}
 
+	return encodeMapParts(keys, vals, kField.Kind() == protoreflect.StringKind)
+}
+
+func encodeMapParts(keys [][]uint32, vals [][]uint32, stringKey bool) ([]uint32, error) {
+	size := len(keys)
+	if size != len(vals) {
+		return nil, errors.New("map key/value size mismatch")
+	}
+
 	var index PerfectHash
 	build := func(src KeySource) {
 		index = Build(src)
@@ -454,13 +582,13 @@ func serializeMap(field protoreflect.FieldDescriptor, pack protoreflect.Map) ([]
 		}
 	}
 
-	if kField.Kind() == protoreflect.StringKind {
+	if stringKey {
 		build(&stringReader{arrayReader: arrayReader{keys: keys}})
 	} else {
 		build(&scalarReader{arrayReader: arrayReader{keys: keys}})
 	}
 	if !index.IsValid() {
-		return nil, fmt.Errorf("fail to build map: %s", field.FullName())
+		return nil, errors.New("fail to build map")
 	}
 
 	n0 := int(calcWordSize(uint32(len(index.Data()))))

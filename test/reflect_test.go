@@ -3,7 +3,6 @@
 package test
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -124,40 +123,34 @@ func TestReflection(t *testing.T) {
 */
 
 func BenchmarkProtoCacheReflect(b *testing.B) {
-	b.StopTimer()
 	raw, err := os.ReadFile("test.proto")
 	if err != nil {
-		fmt.Println(err)
-		return
+		b.Fatal(err)
 	}
 	proto, err := compiler.ParseProto(raw)
 	if err != nil {
-		fmt.Println(err)
-		return
+		b.Fatal(err)
 	}
 	var pool reflect.DescriptorPool
 	if !pool.Register(proto) {
-		fmt.Println("fail to register schema")
-		return
+		b.Fatal("fail to register schema")
 	}
 	descriptor := pool.Find("test.Main")
 	if descriptor == nil {
-		fmt.Println("fail to get root")
-		return
+		b.Fatal("fail to get root")
 	}
 	raw, err = os.ReadFile("test.pc")
 	if err != nil {
-		fmt.Println(err)
-		return
+		b.Fatal(err)
 	}
 	var junk Junk
-	b.StartTimer()
+	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		root := pc.AsMessage(raw)
 		junk.traversePcMessage(descriptor, root)
 	}
-	// b.StopTimer()
-	// fmt.Println(junk.fuse())
+	benchmarkFuse = junk.fuse()
 }
 
 func (p *Junk) traversePcMessage(descriptor *reflect.Descriptor, root pc.Message) {

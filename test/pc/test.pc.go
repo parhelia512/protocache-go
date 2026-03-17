@@ -17,6 +17,7 @@ const (
 	_FIELD_Small_flag uint16 = 1
 	_FIELD_Small_str  uint16 = 3
 	_FIELD_Small_junk uint16 = 4
+	_FIELD_TOTAL_Small uint16 = 5
 )
 
 type Small struct{ core protocache.Message }
@@ -101,6 +102,7 @@ const (
 	_FIELD_Main_vector  uint16 = 28
 	_FIELD_Main_arrays  uint16 = 29
 	_FIELD_Main_modev   uint16 = 31
+	_FIELD_TOTAL_Main   uint16 = 32
 )
 
 type Main struct{ core protocache.Message }
@@ -270,6 +272,7 @@ func (m *Main) GetModev() []Mode {
 const (
 	_FIELD_CyclicA_value  uint16 = 0
 	_FIELD_CyclicA_cyclic uint16 = 1
+	_FIELD_TOTAL_CyclicA uint16 = 2
 )
 
 type CyclicA struct{ core protocache.Message }
@@ -294,6 +297,7 @@ func (m *CyclicA) HasCyclic() bool {
 const (
 	_FIELD_CyclicB_value  uint16 = 0
 	_FIELD_CyclicB_cyclic uint16 = 1
+	_FIELD_TOTAL_CyclicB uint16 = 2
 )
 
 type CyclicB struct{ core protocache.Message }
@@ -317,6 +321,7 @@ func (m *CyclicB) HasCyclic() bool {
 
 const (
 	_FIELD_Deprecated_Valid_val uint16 = 0
+	_FIELD_TOTAL_Deprecated_Valid uint16 = 1
 )
 
 type Deprecated_Valid struct{ core protocache.Message }
@@ -334,6 +339,7 @@ func (m *Deprecated_Valid) GetVal() int32 {
 
 const (
 	_FIELD_Deprecated_junk uint16 = 0
+	_FIELD_TOTAL_Deprecated uint16 = 1
 )
 
 type Deprecated struct{ core protocache.Message }

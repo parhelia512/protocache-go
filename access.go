@@ -59,6 +59,10 @@ type Field struct {
 	data []byte
 }
 
+func (f *Field) Bytes() []byte {
+	return f.data
+}
+
 func (f *Field) IsValid() bool {
 	return len(f.data) != 0
 }
@@ -266,6 +270,42 @@ func (m *Message) GetField(id uint16) Field {
 		return Field{}
 	}
 	return Field{data: m.data[off : off+width]}
+}
+
+func (m *Message) RawPart(id uint16) []byte {
+	field := m.GetField(id)
+	if !field.IsValid() {
+		return nil
+	}
+	if len(field.data) != 4 {
+		return field.data
+	}
+	mark := getUint32(field.data)
+	if (mark & 3) != 3 {
+		return field.data
+	}
+	base := len(m.data) - cap(field.data)
+	start := base + int(mark&0xfffffffc)
+	if start < 0 || start > len(m.data) {
+		return nil
+	}
+	end := len(m.data)
+	section := uint16(m.data[0])*25 + 12
+	for next := id + 1; next < section; next++ {
+		one := m.GetField(next)
+		if len(one.data) != 4 {
+			continue
+		}
+		other := getUint32(one.data)
+		if (other & 3) != 3 {
+			continue
+		}
+		pos := len(m.data) - cap(one.data) + int(other&0xfffffffc)
+		if pos > start && pos < end {
+			end = pos
+		}
+	}
+	return m.data[start:end]
 }
 
 type Array struct {

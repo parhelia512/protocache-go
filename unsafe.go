@@ -51,6 +51,10 @@ func castToBytes[T pod](src []T) []byte {
 	return downCast[T, byte](src)
 }
 
+func castBytesToWords(src []byte) []uint32 {
+	return upCast[byte, uint32](src)
+}
+
 func getInt32(data []byte) int32 {
 	return *(*int32)(unsafe.Pointer(&data[0]))
 }
